@@ -1,0 +1,51 @@
+---
+- name: Deploy Abstracted OpenShift AI Workbench
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Load the Workbench Mapping
+      ansible.builtin.include_vars:
+        file: "../catalog/mapping.yml"
+        name: catalog
+
+    - name: Find requested SKU from AI
+      set_fact:
+        sku: "{{ item }}"
+      loop: "{{ catalog.workbenches }}"
+      when: item.id == catalog_id
+
+    - name: Fail if SKU is missing or invalid
+      fail:
+        msg: "The catalog_id '{{ catalog_id | default('UNDEFINED') }}' was not found in mapping.yml."
+      when: sku is not defined
+
+    - name: Deploy Notebook CR
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: kubeflow.org/v1
+          kind: Notebook
+          metadata:
+            name: "{{ workbench_name | default('student-lab') }}"
+            namespace: rhods-notebooks
+            labels:
+              opendatahub.io/dashboard: "true"
+            annotations:
+              # This is the "AIOps Paper Trail" for your demo
+              aiops.assistant/professor: "{{ professor_handle | default('Unknown') }}"
+              aiops.assistant/department: "{{ department | default('General') }}"
+              aiops.assistant/student-count: "{{ student_count | default('0') | string }}"
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: "{{ workbench_name | default('student-lab') }}"
+                    image: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
+                    resources:
+                      limits:
+                        cpu: "{{ sku.cpu }}"
+                        memory: "{{ sku.memory }}"
+                        nvidia.com/gpu: "{{ sku.gpu | default(0) }}"
+                    workingDir: /opt/app-root/src
