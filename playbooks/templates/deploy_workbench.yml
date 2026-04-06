@@ -13,7 +13,7 @@
   tasks:
     - name: Load the Workbench Mapping
       ansible.builtin.include_vars:
-        file: "{{ playbook_dir | dirname }}/catalog/mapping.yml"
+        file: "catalog/mapping.yml"
         name: catalog
 
     - name: Find requested SKU from AI
