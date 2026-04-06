@@ -4,10 +4,16 @@
   connection: local
   gather_facts: false
 
+  pre_tasks:
+    - name: "Enforce Workflow-Only Execution"
+      ansible.builtin.fail:
+        msg: "DIRECT EXECUTION DENIED. This template must be run via the HITL Workflow."
+      when: awx_workflow_job_id is not defined
+
   tasks:
     - name: Load the Workbench Mapping
       ansible.builtin.include_vars:
-        file: "../catalog/mapping.yml"
+        file: "{{ playbook_dir }}/../catalog/mapping.yml"
         name: catalog
 
     - name: Find requested SKU from AI
@@ -29,7 +35,7 @@
           kind: Notebook
           metadata:
             name: "{{ workbench_name | default('student-lab') }}"
-            namespace: rhods-notebooks
+            namespace: "{{ ocp_namespace | default('rhods-notebooks') }}"
             labels:
               opendatahub.io/dashboard: "true"
             annotations:
