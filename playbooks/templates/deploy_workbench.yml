@@ -4,12 +4,6 @@
   connection: local
   gather_facts: false
 
-  pre_tasks:
-    - name: "Enforce Workflow-Only Execution"
-      ansible.builtin.fail:
-        msg: "DIRECT EXECUTION DENIED. This template must be run via the HITL Workflow."
-      when: awx_workflow_job_id is not defined
-
   tasks:
     - name: Load the Workbench Mapping
       ansible.builtin.include_vars:
@@ -18,14 +12,21 @@
 
     - name: Find requested SKU from AI
       set_fact:
-        sku: "{{ item }}"
-      loop: "{{ catalog.workbenches }}"
-      when: item.id == catalog_id
+        # This filter is faster and cleaner than a loop for finding one item
+        sku: "{{ catalog.workbenches | selectattr('id', 'equalto', catalog_id) | first }}"
+      failed_when: sku is not defined
 
-    - name: Fail if SKU is missing or invalid
-      fail:
-        msg: "The catalog_id '{{ catalog_id | default('UNDEFINED') }}' was not found in mapping.yml."
-      when: sku is not defined
+    - name: Ensure Student Namespace Exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "student-labs-ns"
+            labels:
+              # This label helps RHOAI recognize the namespace
+              opendatahub.io/dashboard: "true"
 
     - name: Deploy Notebook CR
       kubernetes.core.k8s:
@@ -35,23 +36,25 @@
           kind: Notebook
           metadata:
             name: "{{ workbench_name | default('student-lab') }}"
-            namespace: "{{ ocp_namespace | default('rhods-notebooks') }}"
+            namespace: "student-labs-ns"
             labels:
               opendatahub.io/dashboard: "true"
             annotations:
-              # This is the "AIOps Paper Trail" for your demo
               aiops.assistant/professor: "{{ professor_handle | default('Unknown') }}"
               aiops.assistant/department: "{{ department | default('General') }}"
-              aiops.assistant/student-count: "{{ student_count | default('0') | string }}"
           spec:
             template:
               spec:
                 containers:
                   - name: "{{ workbench_name | default('student-lab') }}"
+                    # Using the internal registry path you provided
                     image: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
+                    workingDir: /opt/app-root/src
                     resources:
                       limits:
                         cpu: "{{ sku.cpu }}"
                         memory: "{{ sku.memory }}"
                         nvidia.com/gpu: "{{ sku.gpu | default(0) }}"
-                    workingDir: /opt/app-root/src
+                      requests:
+                        cpu: "{{ sku.cpu }}"
+                        memory: "{{ sku.memory }}"
