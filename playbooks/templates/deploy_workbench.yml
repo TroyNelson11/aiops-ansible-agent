@@ -1,5 +1,5 @@
 ---
-- name: Deploy Abstracted OpenShift AI Workbench
+- name: Deploy OpenShift AI Workbench
   hosts: localhost
   connection: local
   gather_facts: false
@@ -12,21 +12,27 @@
 
     - name: Find requested SKU from AI
       set_fact:
-        # This filter is faster and cleaner than a loop for finding one item
         sku: "{{ catalog.workbenches | selectattr('id', 'equalto', catalog_id) | first }}"
       failed_when: sku is not defined
 
-    - name: Ensure Student Namespace Exists
+    - name: Create Workbench Storage (PVC)
       kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: v1
-          kind: Namespace
+          kind: PersistentVolumeClaim
           metadata:
-            name: "student-labs-ns"
+            # RHOAI usually expects the PVC to match the workbench name
+            name: "{{ workbench_name }}-storage"
+            namespace: "student-labs-ns"
             labels:
-              # This label helps RHOAI recognize the namespace
               opendatahub.io/dashboard: "true"
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi # Standard lab size
 
     - name: Deploy Notebook CR
       kubernetes.core.k8s:
@@ -35,19 +41,19 @@
           apiVersion: kubeflow.org/v1
           kind: Notebook
           metadata:
-            name: "{{ workbench_name | default('student-lab') }}"
+            name: "{{ workbench_name }}"
             namespace: "student-labs-ns"
             labels:
               opendatahub.io/dashboard: "true"
+              opendatahub.io/odh-managed: "true"
             annotations:
-              aiops.assistant/professor: "{{ professor_handle | default('Unknown') }}"
-              aiops.assistant/department: "{{ department | default('General') }}"
+              opendatahub.io/username: "{{ professor_handle | default('admin') }}"
+              openshift.io/display-name: "{{ workbench_name }}"
           spec:
             template:
               spec:
                 containers:
-                  - name: "{{ workbench_name | default('student-lab') }}"
-                    # Using the internal registry path you provided
+                  - name: "{{ workbench_name }}"
                     image: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
                     workingDir: /opt/app-root/src
                     resources:
@@ -58,3 +64,10 @@
                       requests:
                         cpu: "{{ sku.cpu }}"
                         memory: "{{ sku.memory }}"
+                    volumeMounts:
+                      - name: "{{ workbench_name }}-storage"
+                        mountPath: /opt/app-root/src
+                volumes:
+                  - name: "{{ workbench_name }}-storage"
+                    persistentVolumeClaim:
+                      claimName: "{{ workbench_name }}-storage"
