@@ -14,19 +14,43 @@
       set_fact:
         sku: "{{ catalog.workbenches | selectattr('id', 'equalto', catalog_id) | first }}"
 
-    - name: Set Hardware Profile Name
+    - name: Set Hardware Profile Base
       set_fact:
-        # Default first
         hw_profile: "default-profile"
-        # Determine GPU need
-        is_gpu_lab: "{{ sku.gpu is defined }}"
 
-    - name: Override for GPU
+    - name: Set Hardware Profile GPU Override
       set_fact:
         hw_profile: "nvidia-gpu"
-      when: is_gpu_lab | bool
+      when: sku.gpu is defined
 
-    - name: Deploy Workbenches for Students
+    - name: Create ServiceAccounts for Students
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: "{{ workbench_name }}-{{ item }}"
+            namespace: "student-labs-ns"
+      with_sequence: "count={{ student_count | default(1) }}"
+
+    - name: Create Storage (PVC) for Students
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: "{{ workbench_name }}-{{ item }}-storage"
+            namespace: "student-labs-ns"
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 1Gi # Minimal for demo
+      with_sequence: "count={{ student_count | default(1) }}"
+
+    - name: Deploy Notebook CRs for Students
       kubernetes.core.k8s:
         state: present
         definition:
@@ -36,56 +60,67 @@
             name: "{{ workbench_name }}-{{ item }}"
             namespace: "student-labs-ns"
             annotations:
-              # THE "SECRET SAUCE" FOR ROUTES:
               notebooks.opendatahub.io/inject-auth: 'true'
               opendatahub.io/hardware-profile-name: "{{ hw_profile }}"
               opendatahub.io/hardware-profile-namespace: "redhat-ods-applications"
-              opendatahub.io/dashboard: 'true'
-              openshift.io/display-name: "{{ workbench_name }} - Student {{ item }}"
               opendatahub.io/image-display-name: "{{ sku.display_name }}"
               opendatahub.io/username: "{{ professor_handle | default('admin') }}"
+              openshift.io/display-name: "{{ workbench_name }}-{{ item }}"
             labels:
               app: "{{ workbench_name }}-{{ item }}"
               opendatahub.io/dashboard: 'true'
               opendatahub.io/odh-managed: 'true'
-              opendatahub.io/user: "{{ professor_handle | default('admin') | lower | replace(' ', '.') }}"
           spec:
             template:
               spec:
                 serviceAccountName: "{{ workbench_name }}-{{ item }}"
                 containers:
-                  - name: "{{ workbench_name }}"
+                  - name: "{{ workbench_name }}-{{ item }}"
                     image: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
                     workingDir: /opt/app-root/src
+                    resources:
+                      limits:
+                        cpu: "500m" # Slimmed down for demo
+                        memory: "1Gi" # Slimmed down for demo
+                        nvidia.com/gpu: "{{ sku.gpu | default(0) }}"
+                      requests:
+                        cpu: "100m"
+                        memory: "512Mi"
+                    env:
+                      - name: NOTEBOOK_ARGS
+                        value: "--ServerApp.port=8888 --ServerApp.token='' --ServerApp.password='' --ServerApp.base_url=/notebook/student-labs-ns/{{ workbench_name }}-{{ item }} --ServerApp.quit_button=False"
+                      - name: JUPYTER_IMAGE
+                        value: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
+                      - name: NB_PREFIX
+                        value: "/notebook/student-labs-ns/{{ workbench_name }}-{{ item }}"
+                      # SSL/Cert variables from your manual success
+                      - name: PIP_CERT
+                        value: /etc/pki/tls/custom-certs/ca-bundle.crt
+                      - name: REQUESTS_CA_BUNDLE
+                        value: /etc/pki/tls/custom-certs/ca-bundle.crt
+                      - name: SSL_CERT_FILE
+                        value: /etc/pki/tls/custom-certs/ca-bundle.crt
                     ports:
                       - containerPort: 8888
                         name: notebook-port
-                        protocol: TCP
-                    env:
-                      - name: NOTEBOOK_ARGS
-                        value: "--ServerApp.base_url=/notebook/student-labs-ns/{{ workbench_name }}-{{ item }} --ServerApp.token='' --ServerApp.password='' --ServerApp.quit_button=False"
-                    resources:
-                      limits:
-                        cpu: "{{ sku.cpu }}"
-                        memory: "{{ sku.memory }}"
-                        nvidia.com/gpu: "{{ sku.gpu | default(0) }}"
-                  
-                  # FIXED INDENTATION BELOW
-                  - name: kube-rbac-proxy
-                    image: 'registry.redhat.io/rhoai/odh-kube-auth-proxy-rhel9@sha256:4bff9c9b812872be081e64102cbacb711adfacd1862b5593e9809a6822720131'
-                    args:
-                      - '--secure-listen-address=0.0.0.0:8443'
-                      - '--upstream=http://127.0.0.1:8888/'
-                      - '--logtostderr=true'
-                      - '--v=10'
-                      - '--proxy-endpoints-port=8444'
-                      - '--tls-cert-file=/etc/tls/private/tls.crt'
-                      - '--tls-private-key-file=/etc/tls/private/tls.key'
-                      - '--auth-header-fields-enabled=true'
-                      - '--auth-header-user-field-name=X-Auth-Request-User'
-                      - '--auth-header-groups-field-name=X-Auth-Request-Groups'
-                    ports:
-                      - containerPort: 8443
-                        name: kube-rbac-proxy
-                        protocol: TCP
+                    volumeMounts:
+                      - name: storage
+                        mountPath: /opt/app-root/src/
+                      - name: shm
+                        mountPath: /dev/shm
+                      - name: trusted-ca
+                        mountPath: /etc/pki/tls/custom-certs/ca-bundle.crt
+                        readOnly: true
+                        subPath: ca-bundle.crt
+                volumes:
+                  - name: storage
+                    persistentVolumeClaim:
+                      claimName: "{{ workbench_name }}-{{ item }}-storage"
+                  - name: shm
+                    emptyDir:
+                      medium: Memory
+                  - name: trusted-ca
+                    configMap:
+                      name: workbench-trusted-ca-bundle
+                      optional: true
       with_sequence: "count={{ student_count | default(1) }}"
