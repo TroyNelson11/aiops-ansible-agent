@@ -14,9 +14,17 @@
       set_fact:
         sku: "{{ catalog.workbenches | selectattr('id', 'equalto', catalog_id) | first }}"
 
-    - name: Determine Hardware Profile
+    - name: Set Hardware Profile Name
       set_fact:
-        hw_profile: "{{ (sku.gpu is defined) | ternary('nvidia-gpu', 'default-profile') }}"
+        # Default first
+        hw_profile: "default-profile"
+        # Determine GPU need
+        is_gpu_lab: "{{ sku.gpu is defined }}"
+
+    - name: Override for GPU
+      set_fact:
+        hw_profile: "nvidia-gpu"
+      when: is_gpu_lab | bool
 
     - name: Deploy Workbenches for Students
       kubernetes.core.k8s:
