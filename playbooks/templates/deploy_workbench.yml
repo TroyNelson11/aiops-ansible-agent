@@ -1,5 +1,5 @@
 ---
-- name: Deploy OpenShift AI Workbench
+- name: Deploy Class-Sized Lab Environment
   hosts: localhost
   connection: local
   gather_facts: false
@@ -10,64 +10,69 @@
         file: "catalog/mapping.yml"
         name: catalog
 
-    - name: Find requested SKU from AI
+    - name: Find requested SKU
       set_fact:
         sku: "{{ catalog.workbenches | selectattr('id', 'equalto', catalog_id) | first }}"
-      failed_when: sku is not defined
-
-    - name: Create Workbench Storage (PVC)
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: PersistentVolumeClaim
-          metadata:
-            # RHOAI usually expects the PVC to match the workbench name
-            name: "{{ workbench_name }}-storage"
-            namespace: "student-labs-ns"
-            labels:
-              opendatahub.io/dashboard: "true"
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 5Gi # Standard lab size
-
-    - name: Deploy Notebook CR
+    - name: Determine Hardware Profile
+      set_fact:
+        hw_profile: "{{ (sku.gpu is defined) | ternary('nvidia-gpu', 'default-profile') }}"
+    - name: Deploy Workbenches for Students
       kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: kubeflow.org/v1
           kind: Notebook
           metadata:
-            name: "{{ workbench_name }}"
+            # We append the student number to the name
+            name: "{{ workbench_name }}-{{ item }}"
             namespace: "student-labs-ns"
-            labels:
-              opendatahub.io/dashboard: "true"
-              opendatahub.io/odh-managed: "true"
             annotations:
+              notebooks.opendatahub.io/inject-auth: 'true' # TRIGGERS ROUTE CREATION
+              opendatahub.io/hardware-profile-name: "{{ hw_profile }}"
+              opendatahub.io/dashboard: 'true'
+              openshift.io/display-name: "{{ workbench_name }} - Student {{ item }}"
+              opendatahub.io/image-display-name: "{{ sku.display_name }}"
               opendatahub.io/username: "{{ professor_handle | default('admin') }}"
-              openshift.io/display-name: "{{ workbench_name }}"
+            labels:
+              app: "{{ workbench_name }}-{{ item }}"
+              opendatahub.io/dashboard: 'true'
+              opendatahub.io/odh-managed: 'true'
+              opendatahub.io/user: "{{ professor_handle | default('admin') | lower | replace(' ', '.') }}"
           spec:
             template:
               spec:
+                serviceAccountName: "{{ workbench_name }}-{{ item }}" # Needs to exist or use 'default'
                 containers:
                   - name: "{{ workbench_name }}"
                     image: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
                     workingDir: /opt/app-root/src
+                    ports:
+                      - containerPort: 8888
+                        name: notebook-port
+                        protocol: TCP
+                    env:
+                      - name: NOTEBOOK_ARGS
+                        value: "--ServerApp.base_url=/notebook/student-labs-ns/{{ workbench_name }}-{{ item }}"
                     resources:
                       limits:
                         cpu: "{{ sku.cpu }}"
                         memory: "{{ sku.memory }}"
-                        nvidia.com/gpu: "{{ sku.gpu | default(0) }}"
-                      requests:
-                        cpu: "{{ sku.cpu }}"
-                        memory: "{{ sku.memory }}"
-                    volumeMounts:
-                      - name: "{{ workbench_name }}-storage"
-                        mountPath: /opt/app-root/src
-                volumes:
-                  - name: "{{ workbench_name }}-storage"
-                    persistentVolumeClaim:
-                      claimName: "{{ workbench_name }}-storage"
+                  - name: kube-rbac-proxy
+                        image: 'registry.redhat.io/rhoai/odh-kube-auth-proxy-rhel9@sha256:4bff9c9b812872be081e64102cbacb711adfacd1862b5593e9809a6822720131'
+                        args:
+                          - '--secure-listen-address=0.0.0.0:8443'
+                          - '--upstream=http://127.0.0.1:8888/'
+                          - '--logtostderr=true'
+                          - '--v=10'
+                          - '--proxy-endpoints-port=8444'
+                          - '--tls-cert-file=/etc/tls/private/tls.crt'
+                          - '--tls-private-key-file=/etc/tls/private/tls.key'
+                          - '--auth-header-fields-enabled=true'
+                          - '--auth-header-user-field-name=X-Auth-Request-User'
+                          - '--auth-header-groups-field-name=X-Auth-Request-Groups'
+                        ports:
+                          - containerPort: 8443
+                            name: kube-rbac-proxy
+                            protocol: TCP
+      # THIS IS THE PARALLEL LOOP
+      with_sequence: "count={{ student_count | default(1) }}"

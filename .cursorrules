@@ -21,16 +21,17 @@
     1. Professor Name | 2. Student Count | 3. Department | 4. Justification
 
 ## PHASE 3: SUMMARY & EXECUTION
-- **Strict Rule:** NEVER call a "Job Template" directly.
+- **The Process:** Once a SKU is selected from `mapping.yml`, the AI must prepare a `launch_job_template` call.
 - **Tool Call:** Execute `launch_job_template` with:
     - template_name: "Approval-workflow"
     - extra_vars: {
-        professor_handle: "[Name]",
-        department: "[Dept]",
-        student_count: [Count],
-        catalog_id: "[ID]",
-        justification: "[Text]",
-        ocp_namespace: "rhods-notebooks" 
+        catalog_id: "[The ID from mapping.yml]",
+        professor_handle: "[Professor's Name]",
+        department: "[Department Name]",
+        student_count: [Integer - Ask user if not provided],
+        workbench_name: "[A slugified name, e.g., 'physics-lab-2025']",
+        justification: "[Brief reason for request]",
+        ocp_namespace: "student-labs-ns" 
       }
 
 ## STYLE GUIDE
