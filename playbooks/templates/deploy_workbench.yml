@@ -31,6 +31,7 @@
               # THE "SECRET SAUCE" FOR ROUTES:
               notebooks.opendatahub.io/inject-auth: 'true'
               opendatahub.io/hardware-profile-name: "{{ hw_profile }}"
+              opendatahub.io/hardware-profile-namespace: "redhat-ods-applications"
               opendatahub.io/dashboard: 'true'
               openshift.io/display-name: "{{ workbench_name }} - Student {{ item }}"
               opendatahub.io/image-display-name: "{{ sku.display_name }}"
