@@ -101,6 +101,17 @@
                         value: /etc/pki/tls/custom-certs/ca-bundle.crt
                       - name: SSL_CERT_FILE
                         value: /etc/pki/tls/custom-certs/ca-bundle.crt
+                    lifecycle:
+                      postStart:
+                        exec:
+                          command:
+                            - "sh"
+                            - "-c"
+                            - >
+                              URL=$(echo "$GIT_URL" | tr -d "'\"");
+                              if [ -n "$URL" ]; then
+                                cd /opt/app-root/src/ && git clone "$URL";
+                              fi
                     ports:
                       - containerPort: 8888
                         name: notebook-port
