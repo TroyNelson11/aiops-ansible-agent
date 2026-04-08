@@ -93,7 +93,8 @@
                         value: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
                       - name: NB_PREFIX
                         value: "/notebook/student-labs-ns/{{ workbench_name }}-{{ item }}"
-                      # SSL/Cert variables from your manual success
+                      - name: GIT_URL
+                        value: "{{ git_repo_url | default('') }}"
                       - name: PIP_CERT
                         value: /etc/pki/tls/custom-certs/ca-bundle.crt
                       - name: REQUESTS_CA_BUNDLE
