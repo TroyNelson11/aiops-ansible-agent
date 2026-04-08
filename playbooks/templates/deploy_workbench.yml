@@ -57,7 +57,7 @@
           apiVersion: kubeflow.org/v1
           kind: Notebook
           metadata:
-            name: "{{ workbench_name }}-{{ item }}"
+            name: "{{ workbench_name | lower | regex_replace('[^a-z0-9-]', '-') }}-{{ item }}"
             namespace: "student-labs-ns"
             annotations:
               notebooks.opendatahub.io/inject-auth: 'true'
@@ -67,15 +67,15 @@
               opendatahub.io/username: "{{ professor_handle | default('admin') }}"
               openshift.io/display-name: "{{ workbench_name }}-{{ item }}"
             labels:
-              app: "{{ workbench_name }}-{{ item }}"
+              app: "{{ workbench_name | lower | regex_replace('[^a-z0-9-]', '-') }}-{{ item }}"
               opendatahub.io/dashboard: 'true'
               opendatahub.io/odh-managed: 'true'
           spec:
             template:
               spec:
-                serviceAccountName: "{{ workbench_name }}-{{ item }}"
+                serviceAccountName: "{{ workbench_name | lower | regex_replace('[^a-z0-9-]', '-') }}-{{ item }}"
                 containers:
-                  - name: "{{ workbench_name }}-{{ item }}"
+                  - name: "{{ workbench_name | lower | regex_replace('[^a-z0-9-]', '-') }}-{{ item }}"
                     image: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
                     workingDir: /opt/app-root/src
                     resources:
@@ -115,7 +115,7 @@
                 volumes:
                   - name: storage
                     persistentVolumeClaim:
-                      claimName: "{{ workbench_name }}-{{ item }}-storage"
+                      claimName: "{{ workbench_name | lower | regex_replace('[^a-z0-9-]', '-') }}-{{ item }}-storage"
                   - name: shm
                     emptyDir:
                       medium: Memory
