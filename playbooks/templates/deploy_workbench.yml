@@ -47,7 +47,7 @@
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
-                storage: 1Gi # Minimal for demo
+                storage: 1Gi 
       with_sequence: "count={{ student_count | default(1) }}"
 
     - name: Deploy Notebook CRs for Students
@@ -80,8 +80,8 @@
                     workingDir: /opt/app-root/src
                     resources:
                       limits:
-                        cpu: "500m" # Slimmed down for demo
-                        memory: "1Gi" # Slimmed down for demo
+                        cpu: "500m"
+                        memory: "1Gi"
                         nvidia.com/gpu: "{{ sku.gpu | default(0) }}"
                       requests:
                         cpu: "100m"

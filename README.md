@@ -67,23 +67,34 @@ spec:
 - `inventory/`: **The Target Layer.** Definitions of the student clusters and namespaces.
 
 ---
+### 🛠️ Pre-Requisites
 
-## 🎓 How to Use (The Professor's Workflow)
-1. **Start a Chat:** Open Cursor and use the 20B model.
-2. **The Ask:** "I need a lab for my 40 students."
-3. **The Interview:** The agent will reference `catalog/workbenches.md`, ask which stack you need, and confirm your name.
-4. **The Launch:** Once you say "Proceed," the agent calls the `launch_job_template` tool via the MCP bridge to trigger the Ansible
-
-## 🤝 Human-in-the-Loop (HITL) Setup
-To prevent unmanaged resource spikes, this agent triggers **Workflow Job Templates**.
+1. **Create the Target Namespace:**
+   The playbooks are hardcoded to deploy into `student-labs-ns`. 
+   ```bash
+   oc new-project student-labs-ns
 
 ### 1. Create the Workflow in AAP
 - Create a new **Workflow Job Template**.
 - Add an **Approval Node** as the first or second step.
-- Link the "Success" path of the Approval Node to your actual Provisioning Playbook.
+- Link the "Success" path of the Approval Node to your Deploy_Workbench Template.
 
-### 2. Configure Notifications
-- In AAP, go to **Notifications**.
-- Create a "Slack" or "Webhook" (ServiceNow) notification.
-- Toggle the notification to trigger on **"Workflow Approval Required"**.
-- Now, when the AI agent calls the API, the Admin gets a Slack message with a "Click here to approve" link.
+### ⚙️ AAP Project & Job Template Configuration
+The AI sends variables via the API, so AAP must be configured to accept them.
+
+1. **Sync the Code (Projects):** Create a new **Project** in AAP pointing to this Git repository. Sync it to pull in `playbooks/deploy_workbench.yml`.
+2. **Create the Job Template:**
+   Create a Job Template pointing to the deploy playbook. 
+   * **CRITICAL:** You MUST check the **"Prompt on Launch"** box for **Variables**. If this is unchecked, the AAP API will ignore the `extra_vars` sent by the Cursor AI, and the deployment will fail.
+
+## 🎓 How to Use (The Professor's Workflow)
+1. **Start a Chat:** Open Cursor and use your local model.
+2. **The Ask:** "I need a lab for my 4 students."
+3. **The Interview:** The agent will reference `catalog/workbenches.md`, ask which stack you need, and confirm your name.
+4. **The Launch:** Once you seupply all the necessary information the agent calls the `launch_job_template` tool via the MCP bridge to trigger the Ansible
+
+### 🧹 Demo Reset Command
+OpenShift AI does not always delete underlying storage or ServiceAccounts when you delete a workbench from the UI. To completely nuke the environment and reset the demo for the next run, execute this one-liner in your terminal:
+
+```bash
+oc delete notebooks,pvc,sa,services,routes --all -n student-labs-ns
