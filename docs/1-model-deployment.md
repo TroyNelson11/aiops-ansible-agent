@@ -186,12 +186,13 @@
 
   Click **"Deploy"** and configure the model using the following settings:
 
-  > * **Name:** `gpt-oss-20b` *(can be changed)*
-  > * **Hardware profile:** `NVIDIA GPU`
-  > * **Serving Runtime:** `Auto-select` *(vLLM NVIDIA GPU ServingRuntime for KServe)*
-  > * **Make model Deployments available through an external route:** ✅ Checked
-  > * **Require Token Authentication:** ✅ Checked
-  > * **Deployment strategy:** `Recreate`
+  | :--- | :--- |
+  | **Name** | `gpt-oss-20b` *(can be changed)* |
+  | **Hardware profile** | `NVIDIA GPU` |
+  | **Serving Runtime** | `Auto-select` *(vLLM NVIDIA GPU ServingRuntime for KServe)* |
+  | **External route** | ✅ Checked *(Make model Deployments available through an external route)* |
+  | **Token Authentication** | ✅ Checked *(Require Token Authentication)* |
+  | **Deployment strategy** | `Recreate` |
 
 ![](/assets/deployed-models.png)
 
