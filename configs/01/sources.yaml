@@ -1,0 +1,8 @@
+catalogs:
+  - name: My
+    id: my-ai-catalog
+    type: yaml
+    properties:
+      yamlCatalogPath: my-ai-catalog.yaml
+    labels:
+      - My

@@ -1,0 +1,20 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: myregistry-registry
+  namespace: rhoai-model-registries
+data:
+  database-password: bXlwYXNzd29yZA==
+type: Opaque
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: myregistry-mysql
+  namespace: rhoai-model-registries
+data:
+  MYSQL_DATABASE: cmVnaXN0cnk=
+  MYSQL_PASSWORD: bXlwYXNzd29yZA==
+  MYSQL_ROOT_PASSWORD: bXlwYXNzd29yZA==
+  MYSQL_USER: bXl1c2Vy
+type: Opaque

@@ -126,7 +126,7 @@
   > The name of the key in the ConfigMap (e.g. `my-ai-catalog.yaml`) must match the `yamlCatalogPath` in the `sources.yaml` file, located at `.catalogs[].properties.yamlCatalogPath`. Furthermore, both of these attributes must be strings that contain the pertinent YAML.
 
   ```bash
-  yq -i '.data."sources.yaml" = load_str("configs/02/sources.yaml")' scratch/new-model-catalog-sources.yaml
+  yq -i '.data."sources.yaml" = load_str("configs/01/sources.yaml")' scratch/new-model-catalog-sources.yaml
   yq -i '.data."my-ai-catalog.yaml" = load_str("scratch/model-for-configmap.yaml")' scratch/new-model-catalog-sources.yaml
   ```
   > 💡 *verify that `scratch/new-model-catalog-sources.yaml` has two keys in `.data`, `sources.yaml` and `my-ai-catalog`.*
