@@ -186,6 +186,7 @@
 
   Click **"Deploy"** and configure the model using the following settings:
 
+  | Item | Values |
   | :--- | :--- |
   | **Name** | `gpt-oss-20b` *(can be changed)* |
   | **Hardware profile** | `NVIDIA GPU` |
