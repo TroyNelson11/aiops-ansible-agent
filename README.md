@@ -1,100 +1,51 @@
-# AIOps Ansible Agent: Professor's Workbench Provisioner
+# 🤖 AIOps Ansible Agent: The Professor’s Concierge
 
-This repository implements an **Intelligence-First** methodology for managing university infrastructure. It uses a 20B parameter model via **Cursor MCP** to act as a conversational interface for professors to spin up student environments.
+This repository transforms **Ansible Automation Platform (AAP)** and **OpenShift AI** into an "Intelligence-First" infrastructure service. 
 
----
-
-## 🏗 Architecture Overview
-1. **The Brain:** Cursor AI / AnythingLLM (using `.cursorrules` and `catalog/`).
-2. **The Bridge:** Ansible MCP Server (deployed via AAP Operator).
-3. **The Engine:** Red Hat Ansible Automation Platform (AAP) 2.6.
-4. **The Target:** OpenShift / Multi-cloud student workbenches.
+Instead of professors filling out complex Jira tickets or navigating OpenShift YAML, they simply chat with an AI agent. The agent handles the discovery, maps requirements to a technical catalog, and triggers the automation—keeping a human-in-the-loop for final approval.
 
 ---
 
-## 🚀 Setup Instructions
-
-### 1. Deploy the Ansible Operator
-- Log into OpenShift.
-- Navigate to **OperatorHub** and search for **Ansible Automation Platform**.
-- Install the Operator into the `aap` namespace.
-
-### 2. Configure the Platform (UI & Token)
-- Create an **AnsiblePlatform** instance via the Operator.
-- Access the Controller UI once the Route is live.
-- Create an **Application** (Manual/Personal).
-- Generate a **Personal Access Token (PAT)** for a user with 'Execute' permissions on your templates.
-  - *Keep this token handy; it will be your `CONTROLLER_TOKEN`.*
-
-### 3. Deploy the MCP Server (The "Bridge")
-Deploy the MCP component using the AAP Operator (YAML View) add your own public base url:
-```yaml
-spec:
-  allow_write_operations: true
-  public_base_url: 'https://ansibleplatform-aap.apps.cluster-xxxxx.xxxxx.sandbox####.opentlc.com'
-```
-
-### 4. Connect Cursor
-- Open Cursor Settings (top right) -> **Tools & MCP**.
-- + **New MCP Server**:
-
-```json
-{
-  "mcpServers": {
-    "remote-job-mgmt": {
-      "type": "http",
-      "url": "https://<YOUR_MCP_SERVER_ROUTE>/job_management/mcp",
-      "headers": {
-        "Authorization": "Bearer ${env:MY_SERVICE_TOKEN}"
-      }
-    },
-    "remote-inv-mgmt": {
-      "type": "http",
-      "url": "https://<YOUR_MCP_SERVER_ROUTE>/inventory_management/mcp",
-      "headers": {
-        "Authorization": "Bearer ${env:MY_SERVICE_TOKEN}"
-      }
-    }
-  }
-}
-```
----
-
-## 📁 Project Structure
-- `.cursorrules`: **The Behavioral Layer.** Dictates the "Professor's Assistant" persona and safety guardrails.
-- `catalog/`: **The Knowledge Layer.** A markdown-based menu of available workbench environments the AI is allowed to suggest.
-- `playbooks/`: **The Execution Layer.** Ansible YAML files defining the actual infrastructure logic.
-- `inventory/`: **The Target Layer.** Definitions of the student clusters and namespaces.
+## 🌟 The Demo Experience
+Imagine a professor needing a lab for 20 students for a "Deep Learning with PyTorch" course.
+1. **The Interview:** The agent (running in **Cursor**) asks about their needs and consults a predefined `catalog/` of valid hardware/software stacks.
+2. **The Request:** The agent packages the professor's metadata (Student count, Git repo, GPU needs) and sends it to AAP via a **Model Context Protocol (MCP)** bridge.
+3. **The Gatekeeper:** An IT Admin receives a notification in AAP to approve the resource request.
+4. **The Result:** 20 identical, pre-configured Jupyter workbenches appear in **OpenShift AI**, each pre-cloned with the professor's course materials.
 
 ---
-### 🛠️ Pre-Requisites
 
-1. **Create the Target Namespace:**
-   The playbooks are hardcoded to deploy into `student-labs-ns`. 
-   ```bash
-   oc new-project student-labs-ns
+## 🛠️ Architecture at a Glance
 
-### 1. Create the Workflow in AAP
-- Create a new **Workflow Job Template**.
-- Add an **Approval Node** as the first or second step.
-- Link the "Success" path of the Approval Node to your Deploy_Workbench Template.
+* **The Brain:** Cursor AI using `.cursorrules` to maintain a strict "Academic Assistant" persona.
+* **The Knowledge:** A `catalog/` of YAML mappings that define what "flavors" of labs are allowed.
+* **The Bridge:** **Ansible MCP Server**—a lightweight gateway that lets AI talk directly to AAP.
+* **The Engine:** **Ansible Automation Platform 2.6** executing playbooks.
+* **The Target:** **Red Hat OpenShift AI (RHOAI)**.
 
-### ⚙️ AAP Project & Job Template Configuration
-The AI sends variables via the API, so AAP must be configured to accept them.
 
-1. **Sync the Code (Projects):** Create a new **Project** in AAP pointing to this Git repository. Sync it to pull in `playbooks/deploy_workbench.yml`.
-2. **Create the Job Template:**
-   Create a Job Template pointing to the deploy playbook. 
-   * **CRITICAL:** You MUST check the **"Prompt on Launch"** box for **Variables**. If this is unchecked, the AAP API will ignore the `extra_vars` sent by the Cursor AI, and the deployment will fail.
 
-## 🎓 How to Use (The Professor's Workflow)
-1. **Start a Chat:** Open Cursor and use your local model.
-2. **The Ask:** "I need a lab for my 4 students."
-3. **The Interview:** The agent will reference `catalog/workbenches.md`, ask which stack you need, and confirm your name.
-4. **The Launch:** Once you seupply all the necessary information the agent calls the `launch_job_template` tool via the MCP bridge to trigger the Ansible
+---
 
-### 🧹 Demo Reset Command
-OpenShift AI does not always delete underlying storage or ServiceAccounts when you delete a workbench from the UI. To completely nuke the environment and reset the demo for the next run, execute this one-liner in your terminal:
+## 📚 Documentation & Setup Guide
 
-```bash
-oc delete notebooks,pvc,sa,services,routes --all -n student-labs-ns
+We have broken the setup into a series of bite-sized steps. Please follow them in order:
+
+| Step | Topic | Description |
+| :--- | :--- | :--- |
+| **01** | [**AAP Deployment**](./docs/1-aap-setup.md) | Installing the Operator and creating the platform. |
+| **02** | [**Persistent Credentials**](./docs/2-credentials.md) | Setting up ServiceAccounts and 1-year tokens. |
+| **03** | [**MCP Bridge**](./docs/3-mcp-server.md) | Deploying the server that connects AI to Ansible. |
+| **04** | [**Cursor Setup**](./docs/4-cursor-setup.md) | Configuring the AI frontend with your MCP URL. |
+| **05** | [**Ansible Workflow**](./docs/5-ansible-workflow.md) | Building the Job Templates and Approval Gates. |
+| **06** | [**Running the Demo**](./docs/6-demo-instructions.md) | Scripted walkthrough and environment reset. |
+
+---
+
+## 📁 Key Files
+* **`.cursorrules`**: The "Instruction Manual" for the AI. It prevents the AI from hallucinating and ensures it asks for the right metadata.
+* **`catalog/mapping.yml`**: The source of truth for workbench images and hardware profiles.
+* **`playbooks/deploy_workbench.yml`**: The heavy-lifting Ansible logic that talks to the OpenShift API.
+
+---
+**Ready to start?** Head over to [**Step 1: AAP Deployment**](./docs/1-aap-setup.md).
