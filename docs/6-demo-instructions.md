@@ -30,9 +30,9 @@ The file `.cursorrules` is the logic engine of this demo. It forces the AI to fo
 Open a new Chat in Cursor (`Cmd + L` or `Ctrl + L`) and initiate the request. 
 
 **Try this prompt:**
-> *"I'm a Professor in the Biology department and I need a lab set up for my 20 students. We are doing heavy model training with PyTorch and will need GPUs."*
+> *"I'm a Professor in the Biology department and I need a lab set up for my 5 students."*
 
-* **The AI Response:** It should ask you for a **Workbench Name** and a **Justification** for the GPU one by one.
+* **The AI Response:** It should ask you for a **Workbench Name** and a **Justification** if you choose a GPU.
 * **The Confirmation:** Once you provide the details, it will ask for a **Git Repository URL**.
 * **The Submission:** After the Git question, it will present a summary. Click **"Run"** on the tool-call block to send the request to AAP.
 
