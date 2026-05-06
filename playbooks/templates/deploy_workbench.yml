@@ -31,7 +31,7 @@
           kind: ServiceAccount
           metadata:
             name: "{{ workbench_name }}-{{ item }}"
-            namespace: "student-labs-ns"
+            namespace: "jupyter-labs"
       with_sequence: "count={{ student_count | default(1) }}"
 
     - name: Create Storage (PVC) for Students
@@ -42,7 +42,7 @@
           kind: PersistentVolumeClaim
           metadata:
             name: "{{ workbench_name }}-{{ item }}-storage"
-            namespace: "student-labs-ns"
+            namespace: "jupyter-labs"
           spec:
             accessModes: ["ReadWriteOnce"]
             resources:
@@ -58,7 +58,7 @@
           kind: Notebook
           metadata:
             name: "{{ workbench_name | lower | regex_replace('[^a-z0-9-]', '-') }}-{{ item }}"
-            namespace: "student-labs-ns"
+            namespace: "jupyter-labs"
             annotations:
               notebooks.opendatahub.io/inject-auth: 'true'
               opendatahub.io/hardware-profile-name: "{{ hw_profile }}"
@@ -88,11 +88,11 @@
                         memory: "512Mi"
                     env:
                       - name: NOTEBOOK_ARGS
-                        value: "--ServerApp.port=8888 --ServerApp.token='' --ServerApp.password='' --ServerApp.base_url=/notebook/student-labs-ns/{{ workbench_name }}-{{ item }} --ServerApp.quit_button=False"
+                        value: "--ServerApp.port=8888 --ServerApp.token='' --ServerApp.password='' --ServerApp.base_url=/notebook/jupyter-labs/{{ workbench_name }}-{{ item }} --ServerApp.quit_button=False"
                       - name: JUPYTER_IMAGE
                         value: "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/{{ sku.image }}"
                       - name: NB_PREFIX
-                        value: "/notebook/student-labs-ns/{{ workbench_name }}-{{ item }}"
+                        value: "/notebook/jupyter-labs/{{ workbench_name }}-{{ item }}"
                       - name: GIT_URL
                         value: "{{ git_repo_url | default('') }}"
                       - name: PIP_CERT

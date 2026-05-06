@@ -1,25 +1,42 @@
-# Ansible Automation Platform (AAP) Configuration
+- [ ] **📦 Install the AAP Operator from OperatorHub**
 
-Once your infrastructure is up, AAP needs to be configured to talk to OpenShift and accept variables from the AI.
+  *We will use the OpenShift UI to install the Operator, as it automatically handles dependencies and catalog sources.*
 
-### 1. OpenShift Credentials (CRITICAL)
-AAP needs permission to build resources in OpenShift.
-1. In the OpenShift terminal, run `oc whoami -t` to get your Bearer Token.
-2. In AAP, navigate to **Credentials** -> **Add**.
-3. Select **OpenShift or Kubernetes API Bearer Token** as the credential type.
-4. Paste your cluster URL and the token.
-   * ⚠️ **Demo Warning:** If you are using a personal user token (rather than a ServiceAccount), **it will expire daily**. You must update this credential with a fresh token before every demo!
+  1. Log into your OpenShift web console with Cluster Administrator privileges.
+  2. Navigate to **Ecosystem** > **Software Catalog**.
+  3. Search for **Ansible Automation Platform**.
+  4. Click **Install**, twice.
+---
 
-### 2. Project & Job Template Configuration
-The AI sends variables via the API, so AAP must be configured to accept them.
-1. **Sync the Code:** Create a new **Project** in AAP pointing to this Git repository.
-2. **Create the Job Template (Deploy_Workbench):**
-   * Point it to `playbooks/deploy_workbench.yml`.
-   * Attach the OpenShift Credential you created in Step 1.
-   * 🛑 **MANDATORY:** You MUST check the **"Prompt on Launch"** box for **Variables**. If this is unchecked, AAP will ignore the data sent by Cursor, and the deployment will fail.
+- [ ] **⚙️ Deploy the Ansible Platform Instance**
 
-### 3. The Approval Workflow (Human-in-the-Loop)
-To prevent the AI from spinning up costly GPUs without oversight:
-1. Create a new **Workflow Job Template**.
-2. Add an **Approval Node** as the first step.
-3. Link the "Success" path of the Approval Node to your `Deploy_Workbench` template.
+  *Once the Operator is installed and ready, we need to spin up the actual AAP Controller interface.*
+
+  1. Navigate to **Operators** > **Installed Operators** and click on the **Ansible Automation Platform** operator.
+  2. Find the **Ansible Automation Platform** tab or square, and select **Create instance**. You can also go to *All instances* tab > *Create new* > Ansible Automation Platform.
+  3. Change the name to something other than example, switch to the **YAML View** to verify the configuration.
+  4. Click **Create**.
+
+---
+
+- [ ] **🌐 Access the AAP Web Interface**
+
+  *It will take a few minutes for the database and web interface pods to spin up.*
+
+  1. Navigate to **Networking** > **Routes** in the `aap` namespace.
+  2. Look for the route associated with your new AAP instance (it usually contains `aap` or `controller` in the name).
+  3. Click the Location URL to open the AAP web interface.
+> [!NOTE]
+> Retrieve the `admin` user's password by navigating to **Workloads** > **Secrets**, finding the `aap-instance-admin-password` secret, and copying the value.*
+  4. Once logged in, you will be requested to provide an aap subscription. Red Hat employees, select **Username and Password**. Provide your email and password and find the subscription: **Employee SKU** (List is alphabetical).
+  5. Skip analytics page (Next) > **Agree** > **Finish**.
+
+---
+
+
+<p align="center">
+<a href="../docs/1-model-deployment.md/">Prev</a>
+&nbsp;&nbsp;&nbsp;
+<a href="../docs/3-ansible-mcp-server.md/">Next</a>
+</p>
+```

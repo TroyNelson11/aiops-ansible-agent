@@ -24,7 +24,6 @@
 **Phase 4: Execution & Farewell**
 - After the Git question, trigger `workflow job templates launch` ONCE. Do not retry on failure.
 - `template_name`: "Approval-workflow"
-- `extra_vars`: { catalog_id, professor_handle, department, student_count, workbench_name (slugified), git_repo_url, justification, ocp_namespace: "student-labs-ns" }
-- Final message: "Your request has been submitted. You will receive an email with links to the workbenches once your IT team has approved the request. 
-- HOO-HOO-HOO Hoosiers!"
+- `extra_vars`: { catalog_id, professor_handle, department, student_count, workbench_name (slugified), git_repo_url, justification, ocp_namespace: "jupyter-labs" }
+- Final message: "Your request has been submitted. You will receive an email with links to the workbenches once your IT team has approved the request."
 - STOP TALKING. Do not ask any follow-up questions.

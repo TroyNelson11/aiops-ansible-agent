@@ -6,10 +6,10 @@
   oc apply -f configs/01/database-creds.yaml
   ```
   > **Expected output:**
-  > ```text
+  
   > secret/myregistry-registry created
   > secret/myregistry-mysql created
-  > ```
+  
 
 ---
 
@@ -21,11 +21,11 @@
   oc apply -f configs/01/mysql.yaml
   ```
   > **Expected output:**
-  > ```text
+  
   > persistentvolumeclaim/mysql created
   > service/mysql created
   > deployment.apps/mysql created
-  > ```
+  
 
 ---
 
@@ -35,11 +35,11 @@
   oc get pods -n rhoai-model-registries -w
   ```
   > **Expected output:**
-  > ```text
+  
   > NAME                     READY   STATUS    RESTARTS   AGE
   > ...
   > mysql-76cd95cc56-qsdfx   1/1     Running   0          7s
-  > ```
+  
 
 ---
 
@@ -49,9 +49,9 @@
   oc apply -f configs/01/model-registry.yaml
   ```
   > **Expected output:**
-  > ```text
+  
   > secret/myregistry-registry created
-  > ```
+  
 
 ---
 
@@ -61,11 +61,11 @@
   oc get pods -n rhoai-model-registries -w
   ```
   > **Expected output:**
-  > ```text
+  
   > NAME                         READY   STATUS    RESTARTS   AGE
   > ...
   > myregistry-79699fbf6-rwlhx   2/2     Running   0          15s
-  > ```
+  
 
   💡 *You can further validate the registry is working by finding the registry page in OpenShift AI.*
 
@@ -78,9 +78,11 @@
   *Execute the following commands in a terminal:*
 
   ```bash
+  mkdir -p scratch
   POD_NAME=$(oc get pods -n rhoai-model-registries -l app.kubernetes.io/name=model-catalog -o name)
   oc exec -n rhoai-model-registries $POD_NAME -c catalog -- cat /shared-data/validated-models-catalog.yaml > scratch/validated-models-catalog.yaml
   ```
+
 ---
 
 - [ ] **➕ Add the GPT-OSS-20b-essential variant model to the model catalog**
@@ -141,9 +143,9 @@
   oc replace configmap -n rhoai-model-registries -f scratch/new-model-catalog-sources.yaml
   ```
   > **Expected output:**
-  > ```text
+  
   > configmap/model-catalog-sources replaced
-  > ```
+  
 
 ---
 
@@ -156,11 +158,11 @@
   oc get pods -n rhoai-model-registries -l app.kubernetes.io/name=model-catalog -w
   ```
   > **Expected output:**
-  > ```text
+  
   > deployment.apps/model-catalog restarted
   > NAME                            READY   STATUS    RESTARTS   AGE
   > model-catalog-b59948797-s4fvj    2/2     Running   0          11s
-  > ```
+  
 
 ---
 
@@ -170,7 +172,7 @@
 
   ![](/assets/console-catalog-registry.png)
 
-  *When you click into the catalog, you should see that your new catalog `My models` has been added with the model we chose.*
+  *When you click into the catalog, you should see that your new catalog `My models` has been added with the model we chose. You may need to refresh the page.*
 
   ![](/assets/my-model-catalog.png)
 
@@ -178,25 +180,33 @@
 
 - [ ] **🚀 Register and Deploy your model (GPU required)**
 
+  *Create a Project for your model if you have't done so already (`Projects` > `Create Project` > `gpt-model`)*
+
+  *While we are here, for future steps, create a second Project for workbenches to be deployed to and name it "jupyter-labs" (`Projects` > `Create Project` > `jupyter-labs`)*
+
   *From the OpenShift AI model catalog, click on your GPT model (`AI hub` > `Catalog` > `gpt-oss-20b-essential`).*
 
-  First, click **"Register model"** and provide the model name, plus a description if needed. This will save the current item to the model registry, where versioning and multiple instances of the model can be tracked.
+  First, click **Register model**. Default values are alright to leave, press **Register model** again at the bottom of the screen. This will save the current item to the model registry, where versioning and multiple instances of the model can be tracked. 
 
-  Next, from the OpenShift AI model registry, click on your GPT model and select **"Version 1"** (`AI hub` > `Registry` > `gpt-oss-20b-essential` > `Version 1`).
+  Next, select **"Version 1"**. From the OpenShift AI console, navigate to the model registry and click on your GPT model  (`AI hub` > `Registry` > `gpt-oss-20b-essential` > `Version 1`).
 
-  Click **"Deploy"** and configure the model using the following settings:
+  Click **"Deploy"**, *select the project you created for the model first*, and then configure the following settings:
 
   | Item | Values |
   | :--- | :--- |
   | **Name** | `gpt-oss-20b` *(can be changed)* |
+  | **Model type** | `Generative AI model` |
+  | next | -> |
+  | **Model deployment ame** | `gpt-oss-20b` *(can be changed)* |
   | **Hardware profile** | `NVIDIA GPU` |
   | **Serving Runtime** | `Auto-select` *(vLLM NVIDIA GPU ServingRuntime for KServe)* |
-  | **External route** | ✅ Checked *(Make model Deployments available through an external route)* |
+  | next | -> |
+  | **Model access** | ✅ Checked *(Make model Deployments available through an external route)* |
   | **Token Authentication** | ✅ Checked *(Require Token Authentication)* |
   | **Deployment strategy** | `Recreate` |
 
 ![](/assets/deployed-models.png)
 
 <p align="center">
-<a href="/docs/02-aap-setup.md">Next</a>
+<a href="/docs/2-aap-setup.md">Next</a>
 </p>
